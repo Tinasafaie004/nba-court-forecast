@@ -36,12 +36,13 @@ print(type(teams))
 # for i in teams:
 #     print(i["full_name"])
 
-df=pd.DataFrame(teams)
-print("Columns:", df.columns.to_list)
-print("First Record: ")
-print(df.iloc[0])  #integer location -gets the first row of the data frame
+teams_df=pd.DataFrame(teams)
+# print("Teams Columns:", teams_df.columns.to_list())
+# print("First Team Record: ")
+# print(teams_df.iloc[0])  #integer location -gets the first row of the data frame
 
-print("Pagintation:",payload.get("meta"))
+#this will show how many in each page using the key word "meta'" of payload but if it doesn't exists, it returns None
+# print("Pagination:",payload.get("meta"))  #
 
 snapshot= {
     "retrieved_at":datetime.now(timezone.utc).isoformat(),
