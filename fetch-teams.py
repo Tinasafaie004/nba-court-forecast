@@ -51,10 +51,9 @@ snapshot= {
     "response":payload,
 }
 
-output_folder=Path("data/raw")
-output_folder.mkdir(parents=True,exist_ok=True)  #parents True lets create the praent folder too
+output_folder=Path(__file__).resolve().parent/"data"/"raw"/"teams"
+output_folder.mkdir(parents=True,exist_ok=True)
 
 output_file=output_folder/"teams_response.json"
-
 with output_file.open("w",encoding="utf-8") as file:
     json.dump(snapshot,file,indent=2)  #.dumps make the dictionary into JSON

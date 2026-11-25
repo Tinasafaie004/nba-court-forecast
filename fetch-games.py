@@ -52,11 +52,10 @@ snapshot={
 
 }
 
-output_folder=Path("data/raw")
-output_folder.mkdir(parents=True,exist_ok=True)
+output_folder=Path(__file__).resolve().parent/"data"/"raw"/"games"/"2024"
+output_folder.mkdir(parents=True, exist_ok=True)
 
 output_file=output_folder/"2024-games_response.json"
-
 with output_file.open("w",encoding="utf-8") as file:
     json.dump(snapshot,file,indent=2)
 
