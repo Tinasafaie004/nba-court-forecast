@@ -15,8 +15,6 @@ if not api_key:
     raise ValueError("Missing BALLDONTLIE_API_KEY in .env")
 
 
-output_folder=Path("data/raw/games/2024")
-output_folder.mkdir(parents=True, exist_ok=True) 
 
 def save_page(end_point,query_params,payload,output_file):
     
@@ -43,73 +41,81 @@ def get_request(end_point,params,headers,timeout):
 
 #ROUND 1:
 
-keep_looping=True
-counter=0
+
 end_point="https://api.balldontlie.io/v1/games"
-next_cursor=None
-
-while keep_looping:
-    #testing
-    # if counter==3:
-    #     break
-
-    counter+=1
-
-    #we're creating one file per page for safety reasons:
-    #if the wifi is dow, API is down, 429 (too many requets) , the pages that rea already save are still there
-    query_params={"seasons[]":2024, "per_page":100,"cursor":next_cursor}
-
-    output_file=output_folder/f"page_{counter:03d}.json"
-
-    #CACHING :
-    #1.no new request: already exists is loaded from the file, with no request and no sleep // so only missing files are downloaded
-    #2.speed: a fully downloaded season finishes in about 1 second instead of 3 minutes
-    if output_file.exists():
-        with output_file.open(encoding="utf-8") as file:
-            snapshot=json.load(file)   #loads turn the file into a normal Python dict
-
-        print(f"Page {counter}: from cache")
-        next_cursor=snapshot["response"]["meta"].get("next_cursor")
 
 
-    else:
-        max_tries=3
-        for attempt in range(1, max_tries + 1): 
-            try:
-                response=get_request(end_point,query_params,{"Authorization":api_key},30)
-                status=response.status_code
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
-                print(f"Network problem: {error}")
-                time.sleep(30)
-                continue
-            
-            if status == 200:
-                break     
-            elif status in (429,500,502,503,504):
-                print(f"Got {status}, retry {attempt} of {max_tries} in {attempt*20} seconds")
-                time.sleep(attempt * 20)   
-                
-            else:
-                response.raise_for_status()
+for year in range(2018,2026):
+
+    output_folder=Path("data/raw/games")/str(year)
+    output_folder.mkdir(parents=True, exist_ok=True) 
+
+    keep_looping=True
+    counter=0
+    next_cursor=None
+
+    while keep_looping:
+        #testing
+        # if counter==3:
+        #     break
+
+        counter+=1
+
+        #we're creating one file per page for safety reasons:
+        #if the wifi is dow, API is down, 429 (too many requets) , the pages that rea already save are still there
+        query_params={"seasons[]":year, "per_page":100,"cursor":next_cursor}
+
+        output_file=output_folder/f"page_{counter:03d}.json"
+
+        #CACHING :
+        #1.no new request: already exists is loaded from the file, with no request and no sleep // so only missing files are downloaded
+        #2.speed: a fully downloaded season finishes in about 1 second instead of 3 minutes
+        if output_file.exists():
+            with output_file.open(encoding="utf-8") as file:
+                snapshot=json.load(file)   #loads turn the file into a normal Python dict
+
+            print(f"Page {counter}: from cache")
+            next_cursor=snapshot["response"]["meta"].get("next_cursor")
+
+
         else:
-            raise RuntimeError("Never got response")   
-        
-        
-        payload=response.json()  #parses JSON received over HTTP to python object
-        #games_2024=payload["data"]
-        #games_df=pd.DataFrame(games_2024)
-        save_page(end_point,query_params,payload,output_file)
-        print(f"Page {counter}: downloaded")
+            max_tries=3
+            for attempt in range(1, max_tries + 1): 
+                try:
+                    response=get_request(end_point,query_params,{"Authorization":api_key},30)
+                    status=response.status_code
+                except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
+                    print(f"Network problem: {error}")
+                    time.sleep(30)
+                    continue
+                
+                if status == 200:
+                    break     
+                elif status in (429,500,502,503,504):
+                    print(f"Got {status}, retry {attempt} of {max_tries} in {attempt*20} seconds")
+                    time.sleep(attempt * 20)   
+                    
+                else:
+                    response.raise_for_status()
+            else:
+                raise RuntimeError("Never got response")   
+            
+            
+            payload=response.json()  #parses JSON received over HTTP to python object
+            #games_2024=payload["data"]
+            #games_df=pd.DataFrame(games_2024)
+            save_page(end_point,query_params,payload,output_file)
+            print(f"Season {year}:Page {counter}: downloaded")
 
-        next_cursor= payload["meta"].get("next_cursor")
+            next_cursor= payload["meta"].get("next_cursor")
+            
+            #print("start")
+            time.sleep(13) #60/5=12 --> +1 to be safe 13 seconds between requests
+            #print("13 seconds later")
+
+
+        keep_looping=next_cursor is not None
         
-        #print("start")
-        time.sleep(13) #60/5=12 --> +1 to be safe 13 seconds between requests
-        #print("13 seconds later")
-
-
-    keep_looping=next_cursor is not None
-    
 
 
 
