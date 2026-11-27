@@ -66,16 +66,34 @@ while keep_looping:
     #2.speed: a fully downloaded season finishes in about 1 second instead of 3 minutes
     if output_file.exists():
         with output_file.open(encoding="utf-8") as file:
-            data=json.load(file)   #loads turn the file into a normal Python dict
+            snapshot=json.load(file)   #loads turn the file into a normal Python dict
 
         print(f"Page {counter}: from cache")
-        next_cursor=data["response"]["meta"].get("next_cursor")
+        next_cursor=snapshot["response"]["meta"].get("next_cursor")
 
 
     else:
-        response=get_request(end_point,query_params,{"Authorization":api_key},30)
-        # print("Status:", response.status_code)
-        response.raise_for_status()
+        max_tries=3
+        for attempt in range(1, max_tries + 1): 
+            try:
+                response=get_request(end_point,query_params,{"Authorization":api_key},30)
+                status=response.status_code
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as error:
+                print(f"Network problem: {error}")
+                time.sleep(30)
+                continue
+            
+            if status == 200:
+                break     
+            elif status in (429,500,502,503,504):
+                print(f"Got {status}, retry {attempt} of {max_tries} in {attempt*20} seconds")
+                time.sleep(attempt * 20)   
+                
+            else:
+                response.raise_for_status()
+        else:
+            raise RuntimeError("Never got response")   
+        
         
         payload=response.json()  #parses JSON received over HTTP to python object
         #games_2024=payload["data"]
@@ -85,9 +103,9 @@ while keep_looping:
 
         next_cursor= payload["meta"].get("next_cursor")
         
-        print("start")
+        #print("start")
         time.sleep(13) #60/5=12 --> +1 to be safe 13 seconds between requests
-        print("13 seconds later")
+        #print("13 seconds later")
 
 
     keep_looping=next_cursor is not None
